@@ -1,0 +1,6 @@
+# State for this component in this environment (MS-11.4). The prefix must end in /uat;
+# scripts/tf.sh refuses a mismatch. The SA is the stack's own, scoped by IAM condition to this
+# prefix; register it in your state-bootstrap stack under the key "example-repo/example/uat".
+bucket                      = "acme-tf-state"
+prefix                      = "example-repo/example/uat"
+impersonate_service_account = "terraform-example@acme-tf-seed.iam.gserviceaccount.com"

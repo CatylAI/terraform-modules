@@ -1,0 +1,22 @@
+{
+  "environments": [
+    "local",
+    "test",
+    "dev",
+    "uat",
+    "staging",
+    "prod"
+  ],
+  "source": {
+    "path": "contracts/telemetry-vocabulary.v1.json",
+    "pointer": "/environments",
+    "repository": "CatylAI/lib-platform"
+  },
+  "strict_environments": [
+    "dev",
+    "uat",
+    "staging",
+    "prod"
+  ],
+  "version": 1
+}

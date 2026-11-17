@@ -1,0 +1,3 @@
+# One owning team for everything (platform-libs convention). A real GitHub team slug:
+# `gh api orgs/CatylAI/teams` lists `catylai`. The template's Backstage reference was invalid.
+* @CatylAI/catylai

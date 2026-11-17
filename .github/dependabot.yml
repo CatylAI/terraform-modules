@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      actions:
+        patterns: ["*"]
+  # The root template pins a module by prefixed tag (gcp-gcs-bucket-vX.Y.Z). Whether Dependabot
+  # bumps prefixed git tags is the open question in ADR-0007; this entry is the test of it.
+  - package-ecosystem: terraform
+    directory: /templates/root-gcp
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14

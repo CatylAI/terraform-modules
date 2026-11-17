@@ -1,0 +1,19 @@
+# Terraform working state. Modules and examples never commit state or plans.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+# Child modules and their examples do not commit lock files: the consumer's lock file is the
+# one that pins providers (module-standard MS-7.3). The root template is the exception.
+modules/**/.terraform.lock.hcl
+.DS_Store
+.ruff_cache/
+.gate-tmp/
