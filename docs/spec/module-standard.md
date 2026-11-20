@@ -24,8 +24,8 @@ module's `terraform test` suite. A rule with no mark is enforced in review, and 
   split by feature), `outputs.tf`, `README.md`, `tests/*.tftest.hcl`, `examples/minimal/`,
   `examples/complete/` and `.context-digest`. `_internal` modules need no examples and no
   digest. **[gate]**
-- **MS-1.5** A module is built only for a named, live consumer. Speculative modules are not merged
-  (ADR-0004).
+- **MS-1.5** A module is built only for a named consumer: one that is live, or one whose root is
+  built in the same wave, alongside the module. Speculative modules are not merged (ADR-0004).
 
 ## MS-2 Inputs
 
