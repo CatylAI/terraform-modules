@@ -11,6 +11,10 @@
     "modules/gcp/gcs-bucket": {
       "component": "gcp-gcs-bucket",
       "changelog-path": "CHANGELOG.md"
+    },
+    "modules/gcp/workload-identity-pool": {
+      "component": "gcp-workload-identity-pool",
+      "changelog-path": "CHANGELOG.md"
     }
   }
 }
