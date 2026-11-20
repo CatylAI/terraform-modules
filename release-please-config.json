@@ -19,6 +19,10 @@
     "modules/gcp/service-account": {
       "component": "gcp-service-account",
       "changelog-path": "CHANGELOG.md"
+    },
+    "modules/gcp/workload-identity-pool": {
+      "component": "gcp-workload-identity-pool",
+      "changelog-path": "CHANGELOG.md"
     }
   }
 }
