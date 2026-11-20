@@ -72,7 +72,9 @@ module_tests() {
     } 2>&1)" || rc=1
     # Show only what did not pass, plus the verdict line.
     printf '%s\n' "$out" | grep -E 'run "|Success!|Failure!|Error' | grep -vE '\.\.\. pass$' || true
-    printf '%s\n' "$out" | tail -1 | grep -q '^Success!' || rc=1
+    # Command substitution reads the whole pipe; `| grep -q` would exit at the first match and
+    # can SIGPIPE `tail` under pipefail.
+    [[ "$(printf '%s\n' "$out" | tail -1)" == Success!* ]] || rc=1
   done
   return $rc
 }
