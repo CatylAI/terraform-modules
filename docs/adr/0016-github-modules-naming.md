@@ -18,6 +18,9 @@ no labels.
   everywhere.
 - The GitHub resource name is `var.name` verbatim. `name_override` is not offered, because there
   is no computed name to override.
+- Where the GitHub resource is named by a dedicated input (github/repository-environment's
+  `environment_name`, because one component manages the same environment name on several
+  repositories), that input is used verbatim and `var.name` identifies the module call only.
 - `module.context.labels` is not applied: GitHub has no labels. A module may offer repository
   topics as an input; they are not derived from context.
 - `context.environment` still must not drive behavior (MS-3.5). A GitHub environment's own name

@@ -158,8 +158,9 @@ module's `terraform test` suite. A rule with no mark is enforced in review, and 
   - Every module exposes this as `deletion_protection = { enabled = optional(bool, true) }`, so
     the knob reads the same in every module.
   - Literal `prevent_destroy = true` is used only on resources with neither setting whose loss
-    is unrecoverable and which are never torn down per environment (DNS zones, WIF pools, state
-    buckets).
+    is unrecoverable and which are never torn down per environment. Check the provider schema
+    first: WIF pools, for example, offer `deletion_policy` from google 8.3.0, so they take the knob
+    and not the literal.
 
 ## MS-6 Invariants (no knob, ever)
 

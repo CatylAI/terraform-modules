@@ -194,7 +194,8 @@ def check_module_code(module: Path, public: bool) -> None:
             fail("MS-1.1", f, "backend block in a module")
         if "google_service_account_key" in body:
             fail("MS-6.1", f, "creates a service-account key")
-        if public and re.search(r"\bcontext\.environment\b", body):
+        # Strings are stripped first: a description may mention context.environment; code may not.
+        if public and re.search(r"\bcontext\.environment\b", re.sub(r'"(?:[^"\\]|\\.)*"', '""', body)):
             fail("MS-3.5", f, "branches on context.environment")
 
         for name, vbody in blocks(body, "variable"):
