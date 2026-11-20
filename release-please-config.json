@@ -23,6 +23,10 @@
     "modules/gcp/workload-identity-pool": {
       "component": "gcp-workload-identity-pool",
       "changelog-path": "CHANGELOG.md"
+    },
+    "modules/github/repository-environment": {
+      "component": "github-repository-environment",
+      "changelog-path": "CHANGELOG.md"
     }
   }
 }
