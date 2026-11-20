@@ -111,7 +111,8 @@ module's `terraform test` suite. A rule with no mark is enforced in review, and 
   - `repo`: a repository name.
   - `name`: kebab-case.
   - User label keys: valid GCP label keys, and none of the reserved keys.
-- **MS-3.3** The resource name is `<prefix>-<name>`. The prefix is `context.name_prefix` when the
+- **MS-3.3** The resource name of a GCP module is `<prefix>-<name>`. GitHub modules use
+  `var.name` verbatim and apply no labels (ADR-0016). The prefix is `context.name_prefix` when the
   caller sets it, otherwise `<tenant>-<environment>-<component>`. `name_override` replaces the
   whole name, for adoption only (MS-2.3). A module states any length limit its resource type imposes, as a
   `precondition` on the resource.
