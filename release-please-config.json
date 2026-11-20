@@ -11,6 +11,10 @@
     "modules/gcp/gcs-bucket": {
       "component": "gcp-gcs-bucket",
       "changelog-path": "CHANGELOG.md"
+    },
+    "modules/github/repository-environment": {
+      "component": "github-repository-environment",
+      "changelog-path": "CHANGELOG.md"
     }
   }
 }
