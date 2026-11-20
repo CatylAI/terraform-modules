@@ -23,6 +23,11 @@ no labels.
   repositories), that input is used verbatim and `var.name` identifies the module call only.
 - `module.context.labels` is not applied: GitHub has no labels. A module may offer repository
   topics as an input; they are not derived from context.
+- Where a GitHub name may break kebab-case (repositories such as `.github`, or with capitals and
+  dots), the module takes the name through a dedicated optional input (github/repository's
+  `repository_name`), validated by GitHub's own naming rule. It falls back to `var.name`.
+- Public repository visibility is not an MS-5.3 opening: public repositories are ordinary, and
+  `visibility` is a required, explicit input with no default.
 - `context.environment` still must not drive behavior (MS-3.5). A GitHub environment's own name
   is an ordinary input (for example `production`), not `context.environment`.
 
