@@ -11,6 +11,10 @@
     "modules/gcp/gcs-bucket": {
       "component": "gcp-gcs-bucket",
       "changelog-path": "CHANGELOG.md"
+    },
+    "modules/gcp/project-services": {
+      "component": "gcp-project-services",
+      "changelog-path": "CHANGELOG.md"
     }
   }
 }
