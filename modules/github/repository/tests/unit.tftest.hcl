@@ -130,6 +130,30 @@ run "name_is_verbatim_and_unlabelled" {
   }
 }
 
+run "repository_name_is_used_verbatim" {
+  command = plan
+  variables {
+    name              = "org-profile"
+    repository_name   = ".github"
+    labels            = { agent-ready = { name = "agent: ready", color = "0e8a16" } }
+    actions_variables = { AGENT_ENABLED = "false" }
+  }
+
+  assert {
+    condition     = github_repository.this[0].name == ".github"
+    error_message = "repository_name must name the repository verbatim, overriding name."
+  }
+  assert {
+    condition = (
+      github_repository_ruleset.this[0].repository == ".github" &&
+      github_repository_vulnerability_alerts.this[0].repository == ".github" &&
+      github_issue_label.this["agent-ready"].repository == ".github" &&
+      github_actions_variable.this["AGENT_ENABLED"].repository == ".github"
+    )
+    error_message = "every resource must reference the repository by its effective name."
+  }
+}
+
 run "disabled_creates_nothing" {
   command = plan
   variables {
@@ -477,6 +501,24 @@ run "rejects_secret_looking_variable" {
   command = plan
   variables { actions_variables = { DEPLOY_TOKEN = "x" } }
   expect_failures = [var.actions_variables]
+}
+
+run "rejects_invalid_repository_name" {
+  command = plan
+  variables { repository_name = "My Repo" }
+  expect_failures = [var.repository_name]
+}
+
+run "rejects_dot_repository_name" {
+  command = plan
+  variables { repository_name = ".." }
+  expect_failures = [var.repository_name]
+}
+
+run "rejects_repository_name_too_long" {
+  command = plan
+  variables { repository_name = "A-Repository-Name-That-Is-Far-Too-Long-For-GitHub-To-Accept-Because-It-Runs-Past-One-Hundred-Chars-XY" }
+  expect_failures = [var.repository_name]
 }
 
 run "rejects_name_too_long_for_github" {

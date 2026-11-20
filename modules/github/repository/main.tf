@@ -1,5 +1,5 @@
 # The context call validates the shared inputs (MS-3.1). Its name and labels are not used: a
-# GitHub repository is named var.name verbatim and GitHub has no labels (ADR-0016).
+# GitHub repository is named verbatim, never prefixed, and GitHub has no labels (ADR-0016).
 module "context" {
   source = "../../_internal/context"
 
@@ -9,6 +9,10 @@ module "context" {
 }
 
 locals {
+  # var.name is the kebab-case instance id that context validates. repository_name covers live
+  # repositories whose names are not kebab-case (.github, mixed case), so they adopt with no rename.
+  repository_name = coalesce(var.repository_name, var.name)
+
   ruleset = var.default_branch_ruleset
 
   # Secret scanning and push protection need a paid feature on private and internal repositories.
@@ -23,7 +27,7 @@ locals {
 resource "github_repository" "this" {
   count = var.enabled ? 1 : 0
 
-  name         = var.name
+  name         = local.repository_name
   visibility   = var.visibility
   description  = var.description
   homepage_url = var.homepage_url
@@ -74,7 +78,7 @@ resource "github_repository" "this" {
 
   lifecycle {
     precondition {
-      condition     = length(var.name) <= 100
+      condition     = length(local.repository_name) <= 100
       error_message = "A GitHub repository name must be at most 100 characters."
     }
   }

@@ -9,12 +9,13 @@ module "repository" {
     repo        = "platform-github"
     labels      = { team = "platform" }
   }
-  name         = "storefront"
-  enabled      = true
-  visibility   = "private"
-  description  = "Storefront web application"
-  homepage_url = "https://www.example.com"
-  topics       = ["storefront", "web"]
+  name            = "storefront"
+  repository_name = null # set only for a name that is not kebab-case, e.g. ".github"
+  enabled         = true
+  visibility      = "private"
+  description     = "Storefront web application"
+  homepage_url    = "https://www.example.com"
+  topics          = ["storefront", "web"]
 
   features = {
     issues      = true

@@ -17,8 +17,11 @@ module "orders_service" {
 }
 ```
 
-The repository is named `var.name` exactly: no prefix, no labels (ADR-0016). Topics are an input
-of their own and are never derived from `context`.
+The repository is named `var.name` exactly: no prefix, no labels (ADR-0016). `name` is kebab-case,
+because `_internal/context` validates it as the instance id. For a repository whose name is not
+kebab-case (`.github`, `MyService`, `api_v2`), set `repository_name`: the repository is then named
+`repository_name` verbatim, and `name` stays any kebab-case id. Topics are an input of their own
+and are never derived from `context`.
 
 ## Defaults, and how to override them
 
@@ -93,7 +96,10 @@ The name is used verbatim, so adoption is an `import` (or a `moved` block from a
 with no rename. Set every input below to the repository's current value, then require a plan that
 shows no changes:
 
-- `name` and `visibility`
+- `name`: the repository's exact name when it is kebab-case. Otherwise any kebab-case id, with
+  `repository_name` set to the exact name (for example `name = "org-profile"`,
+  `repository_name = ".github"`)
+- `visibility`
 - `description`, `homepage_url` and `topics`
 - `features`, `merge` and `contributions`, matched to the live settings
 - `initial_commit = { enabled = false }`: import records `auto_init = false`
@@ -178,7 +184,7 @@ creating it fails.
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
 | context | Who and where, supplied by the calling root: tenant, environment, component, repo, optional labels, allowed_environments and name_prefix (module-standard MS-3). Validated, but GitHub carries no labels and the repository name ignores it (ADR-0016). | ```object({ tenant = string environment = string component = string repo = string labels = optional(map(string), {}) allowed_environments = optional(list(string)) name_prefix = optional(string) })``` | n/a | yes |
-| name | Repository name, used verbatim with no prefix (ADR-0016), so an existing repository is adopted by import with no rename. Kebab-case, at most 100 characters. | `string` | n/a | yes |
+| name | Logical name of this instance, kebab-case. It is also the repository name, verbatim with no prefix (ADR-0016), unless repository_name is set. | `string` | n/a | yes |
 | visibility | Repository visibility: public, private or internal (internal needs GitHub Enterprise Cloud). Required: it decides which security features the owner's plan can turn on. | `string` | n/a | yes |
 | actions_variables | GitHub Actions repository variables, keyed by variable name. Values are plain text that anyone with read access can see, so secrets never go here (MS-6.2): set Actions secrets out of band. Names that look like secrets are rejected. | `map(string)` | `{}` | no |
 | contributions | Contribution settings. Private forking off, so code in a private or internal repository stays in it; ignored for public repositories, where GitHub always allows forks. Web commit sign-off off. | ```object({ allow_forking = optional(bool, false) web_commit_signoff_required = optional(bool, false) })``` | `{}` | no |
@@ -191,6 +197,7 @@ creating it fails.
 | initial_commit | Creates the repository with an initial commit, so the default branch exists before the ruleset protects it. Create-time only: set enabled = false when adopting an existing repository, because import records false. | ```object({ enabled = optional(bool, true) })``` | `{}` | no |
 | labels | Issue labels keyed by a stable name. name defaults to the key; set it to rename a label in place without losing it from issues. color is six hex digits with no leading '#'. Additive: labels not listed here are left alone. | ```map(object({ name = optional(string) color = string description = optional(string, "") }))``` | `{}` | no |
 | merge | Pull request merge settings. All three merge methods allowed, auto-merge off, head branches deleted after merge. Title and message values follow the GitHub API. | ```object({ allow_merge_commit = optional(bool, true) allow_squash_merge = optional(bool, true) allow_rebase_merge = optional(bool, true) allow_auto_merge = optional(bool, false) allow_update_branch = optional(bool, false) delete_branch_on_merge = optional(bool, true) merge_commit_title = optional(string, "MERGE_MESSAGE") merge_commit_message = optional(string, "PR_TITLE") squash_merge_commit_title = optional(string, "COMMIT_OR_PR_TITLE") squash_merge_commit_message = optional(string, "COMMIT_MESSAGES") })``` | `{}` | no |
+| repository_name | Repository name when it is not kebab-case, for example .github or a mixed-case name, so an existing repository is adopted by import with no rename. GitHub's rule: letters, digits, '.', '-' and '_', at most 100 characters. Null uses name. | `string` | `null` | no |
 | security | Security features. Vulnerability alerts, secret scanning and push protection are on. On a private or internal repository, secret scanning and push protection need GitHub Secret Protection or Advanced Security on the owner's plan, and the API rejects them otherwise: turn both off explicitly there. With both off, the module stops managing them and leaves GitHub's current setting as it is. advanced_security is null (not sent) by default; set it only for a private or internal repository on the older, combined Advanced Security licence. With split licensing (Secret Protection and Code Security sold separately) the API rejects it. | ```object({ vulnerability_alerts = optional(bool, true) secret_scanning = optional(bool, true) secret_scanning_push_protection = optional(bool, true) advanced_security = optional(bool) })``` | `{}` | no |
 | topics | Repository topics. Not derived from context (ADR-0016). An empty set leaves the repository's existing topics alone. | `set(string)` | `[]` | no |
 

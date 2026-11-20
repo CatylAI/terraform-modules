@@ -13,7 +13,7 @@ variable "context" {
 }
 
 variable "name" {
-  description = "Repository name, used verbatim with no prefix (ADR-0016), so an existing repository is adopted by import with no rename. Kebab-case, at most 100 characters."
+  description = "Logical name of this instance, kebab-case. It is also the repository name, verbatim with no prefix (ADR-0016), unless repository_name is set."
   type        = string
 }
 
@@ -22,6 +22,17 @@ variable "enabled" {
   type        = bool
   default     = true
   nullable    = false
+}
+
+variable "repository_name" {
+  description = "Repository name when it is not kebab-case, for example .github or a mixed-case name, so an existing repository is adopted by import with no rename. GitHub's rule: letters, digits, '.', '-' and '_', at most 100 characters. Null uses name."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.repository_name == null || (can(regex("^[A-Za-z0-9._-]{1,100}$", coalesce(var.repository_name, "x"))) && !contains([".", ".."], coalesce(var.repository_name, "x")))
+    error_message = "repository_name must be 1-100 characters of letters, digits, '.', '-' and '_', and must not be '.' or '..'."
+  }
 }
 
 variable "visibility" {
