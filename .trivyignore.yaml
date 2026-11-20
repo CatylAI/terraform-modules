@@ -1,10 +1,14 @@
 # Every suppression is scoped to the paths it covers and carries a statement naming why the rule
 # does not apply and where the control lives instead (module-standard MS-9.4). The gate rejects an
 # entry without both.
+#
+# Paths are globs. trivy also scans a module where the root template sources it by release tag,
+# and reports it under the remote URL (git::https:/github.com/.../modules/gcp/...), so a literal
+# local path would not match it.
 misconfigurations:
   - id: GCP-0066
     paths:
-      - "modules/gcp/gcs-bucket/main.tf"
+      - "**/modules/gcp/gcs-bucket/main.tf"
     statement: >-
       CMEK is an input (encryption.kms_key_name), off by default under MS-14: Google-managed
       encryption at rest is always on, and a customer-managed key adds a key dependency and KMS
@@ -12,7 +16,7 @@ misconfigurations:
       exercise the CMEK path.
   - id: GCP-0077
     paths:
-      - "modules/gcp/gcs-bucket/main.tf"
+      - "**/modules/gcp/gcs-bucket/main.tf"
     statement: >-
       GCS usage logs are an input (access_logging), off by default. Google recommends Cloud Audit
       Logs (Data Access) as the access record; enable those at the project or organisation level.
