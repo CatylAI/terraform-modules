@@ -15,6 +15,8 @@ module "wif" {
   enabled       = true
   project_id    = "acme-uat"
 
+  deletion_protection = { enabled = true }
+
   oidc_providers = {
     github = {
       issuer_uri = "https://token.actions.githubusercontent.com"

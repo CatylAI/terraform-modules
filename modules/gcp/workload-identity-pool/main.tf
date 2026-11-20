@@ -20,16 +20,13 @@ resource "google_iam_workload_identity_pool" "this" {
   workload_identity_pool_id = module.context.name
   disabled                  = false
 
-  # Two locks, because each covers a gap in the other. prevent_destroy (MS-5.4, ADR-0011) stops a
-  # plan that would destroy the pool while this block is in the configuration. deletion_policy
-  # lives in state, so it still refuses the delete after the module call is removed, when
-  # prevent_destroy has gone with the configuration. A deleted pool's id stays reserved for about
-  # 30 days, and every IAM binding on its principals stops matching.
-  deletion_policy = "PREVENT"
+  # Provider-native protection (MS-5.4, ADR-0011). deletion_policy lives in state, so it still
+  # refuses the delete after the module call is removed. A deleted pool's id stays reserved for
+  # about 30 days, and every IAM binding on its principals stops matching. Providers carry no
+  # protection: revoking trust must never be blocked.
+  deletion_policy = var.deletion_protection.enabled ? "PREVENT" : "DELETE"
 
   lifecycle {
-    prevent_destroy = true
-
     precondition {
       condition     = can(regex("^[a-z0-9-]{4,32}$", module.context.name)) && !startswith(module.context.name, "gcp-")
       error_message = "The pool id must be 4-32 characters of lowercase letters, digits and '-', and must not start with 'gcp-' (reserved by Google). Shorten name or component, or set context.name_prefix."

@@ -51,7 +51,7 @@ run "secure_defaults" {
   }
   assert {
     condition     = google_iam_workload_identity_pool.this[0].deletion_policy == "PREVENT"
-    error_message = "the pool must carry deletion_policy PREVENT, so removing the module call cannot delete it."
+    error_message = "the pool must carry deletion_policy PREVENT by default, so removing the module call cannot delete it."
   }
   assert {
     condition     = google_iam_workload_identity_pool.this[0].disabled == false
@@ -201,6 +201,20 @@ run "github_and_kubernetes_in_one_pool" {
   assert {
     condition     = toset(keys(output.principal_sets)) == toset(["repository", "repository_owner_id", "namespace", "service_account"])
     error_message = "principal_sets must cover the custom attributes of every provider in the pool."
+  }
+}
+
+run "deletion_protection_can_be_switched_off" {
+  command = plan
+  variables { deletion_protection = { enabled = false } }
+
+  assert {
+    condition     = google_iam_workload_identity_pool.this[0].deletion_policy == "DELETE"
+    error_message = "deletion_protection.enabled = false must set deletion_policy DELETE, so the pool can be torn down."
+  }
+  assert {
+    condition     = google_iam_workload_identity_pool_provider.this["github"].disabled == false && google_iam_workload_identity_pool_provider.this["github"].attribute_condition == "assertion.repository_owner_id == '123456789'"
+    error_message = "switching deletion protection off must leave the providers unchanged."
   }
 }
 

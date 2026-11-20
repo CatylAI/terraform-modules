@@ -107,3 +107,12 @@ variable "oidc_providers" {
     error_message = "oidc_providers jwks_json must be a JWKS document: JSON with a non-empty keys array."
   }
 }
+
+variable "deletion_protection" {
+  description = "When enabled, Terraform refuses to destroy the pool (deletion_policy PREVENT). Providers are never protected, so revoking trust is never blocked; set a provider's disabled for an immediate stop."
+  type = object({
+    enabled = optional(bool, true)
+  })
+  default  = {}
+  nullable = false
+}

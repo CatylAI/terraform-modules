@@ -50,7 +50,8 @@ secret.
 | `google.subject` mapping | required | none; the API requires it for OIDC providers |
 | Allowed audiences | empty: the token audience must be the provider's own resource name | `allowed_audiences = ["..."]`, at most 10 |
 | Provider state | enabled | `disabled = true` stops new token exchanges without deleting the provider |
-| Pool deletion | literal `prevent_destroy = true` and `deletion_policy = "PREVENT"` | none (MS-5.4, ADR-0011) |
+| Pool deletion | `deletion_policy = "PREVENT"` | `deletion_protection = { enabled = false }` (sets `DELETE`) for teardown |
+| Provider deletion | unprotected: removing a provider from the map deletes it | none; use `disabled = true` for an immediate stop that keeps the provider |
 
 The GitHub guard applies to `https://token.actions.githubusercontent.com` and to any enterprise
 issuer under it. It pins trust to the owner's numeric id, which survives a rename; an owner name
@@ -105,17 +106,22 @@ moved {
 
 ## Removing a pool
 
-The pool is never torn down per environment. A deleted pool's id stays reserved for about 30
-days, and every IAM binding on its principals stops matching. Retire one by removing it from state
-(`terraform state rm`) and deleting it outside Terraform on purpose. Providers carry no lock:
-removing one from the map deletes it, so revoking trust is never blocked.
+The pool is deletion-protected by default: `deletion_policy = "PREVENT"` sits in state, so a
+destroy or an apply that would delete the pool fails, even after the module call is removed
+(MS-5.4, ADR-0011). To tear one down, set `deletion_protection = { enabled = false }`, apply, then
+destroy. A deleted pool's id stays reserved for about 30 days, and every IAM binding on its
+principals stops matching, so recreating the same id fails until then.
+
+Providers carry no protection: removing one from the map deletes it, so revoking trust is never
+blocked. For an immediate stop that keeps the provider and its id, set `disabled = true`; new token
+exchanges are refused at the next apply.
 
 ## Architecture Framework
 
 | Pillar | Default | Trade-off |
 |---|---|---|
 | Security | Short-lived federated tokens instead of keys; a required, non-empty condition per provider; GitHub trust pinned to the immutable owner id; https issuers only | Removing a provider is unprotected, on purpose, so trust can always be revoked |
-| Reliability | The pool is locked twice: literal `prevent_destroy` and `deletion_policy = "PREVENT"` in state | Teardown takes a deliberate `terraform state rm`, so scratch environments cannot drop the pool with a plain destroy |
+| Reliability | `deletion_policy = "PREVENT"` on the pool, held in state | Teardown takes a tfvars change (`deletion_protection.enabled = false`) and an apply before the destroy, which review sees |
 | Cost optimization | Nothing is billed | None |
 | Operational excellence | Pool id from context; providers keyed by stable ids; outputs shaped for CI and IAM bindings | Pools have no labels, so the context labels are not applied |
 | Performance | Token exchange is served by Google's STS; nothing to size | None |
@@ -156,6 +162,7 @@ removing one from the map deletes it, so revoking trust is never blocked.
 | name | Logical name of this pool, unique within the component. Kebab-case. The pool id is <prefix>-<name>, where prefix is context.name_prefix or <tenant>-<environment>-<component>; the API limits it to 4-32 characters. | `string` | n/a | yes |
 | oidc_providers | OIDC providers in the pool, keyed by provider id (4-32 characters of [a-z0-9-], not starting with gcp-). Each provider takes:   issuer_uri           https URL of the token issuer   attribute_mapping    Google attribute => CEL expression; must map google.subject   attribute_condition  CEL expression every token must satisfy; required and non-empty   allowed_audiences    accepted aud values (at most 10); empty means the provider's own resource name   jwks_json            the issuer's public JWKS, for an issuer Google cannot reach (a private cluster)   disabled             stops new token exchanges without deleting the provider A GitHub Actions issuer (https://token.actions.githubusercontent.com, or an enterprise issuer under it) must map attribute.repository_owner_id and reference assertion.repository_owner_id in its condition, so trust is pinned to the immutable numeric owner id. | ```map(object({ issuer_uri = string attribute_mapping = map(string) attribute_condition = string allowed_audiences = optional(list(string), []) jwks_json = optional(string) disabled = optional(bool, false) }))``` | n/a | yes |
 | project_id | Project that owns the pool. | `string` | n/a | yes |
+| deletion_protection | When enabled, Terraform refuses to destroy the pool (deletion_policy PREVENT). Providers are never protected, so revoking trust is never blocked; set a provider's disabled for an immediate stop. | ```object({ enabled = optional(bool, true) })``` | `{}` | no |
 | enabled | Set false to create nothing. Every output is then null. | `bool` | `true` | no |
 | name_override | Verbatim pool id, only for adopting a pool that predates the naming convention (ADR-0013). Leave null for new pools. | `string` | `null` | no |
 
