@@ -67,7 +67,9 @@ module's `terraform test` suite. A rule with no mark is enforced in review, and 
   it.
 - **MS-2.3** `name_override` (`string`, default `null`) is the only way to break the naming
   convention. It exists to adopt resources whose names predate this standard, with zero
-  diff (ADR-0013). New resources leave it null.
+  diff (ADR-0013). New resources leave it null. Only a module that computes a resource name from
+  `context` offers it. A module whose resources have no name (API enablement) or take their name
+  verbatim (GitHub modules, ADR-0016) omits it.
 - **MS-2.4** Inputs that a caller must decide have **no default**: anything that differs
   between environments or deployments, such as project IDs, locations, sizes and images.
   A forgotten value must fail at plan time, not quietly pick something.
