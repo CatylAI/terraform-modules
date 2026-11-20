@@ -15,6 +15,10 @@
     "modules/gcp/project-services": {
       "component": "gcp-project-services",
       "changelog-path": "CHANGELOG.md"
+    },
+    "modules/gcp/service-account": {
+      "component": "gcp-service-account",
+      "changelog-path": "CHANGELOG.md"
     }
   }
 }
