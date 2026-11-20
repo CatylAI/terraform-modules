@@ -28,8 +28,16 @@ run "secure_defaults" {
     error_message = "a deployment branch policy must be set by default, so the environment is never open."
   }
   assert {
-    condition     = github_repository_environment.this[0].deployment_branch_policy[0].protected_branches == true && github_repository_environment.this[0].deployment_branch_policy[0].custom_branch_policies == false
-    error_message = "deployments must come only from protected branches by default, with no custom branch policies."
+    condition     = github_repository_environment.this[0].deployment_branch_policy[0].protected_branches == false && github_repository_environment.this[0].deployment_branch_policy[0].custom_branch_policies == true
+    error_message = "the default policy must be custom branch patterns, not protected branches (which let every branch deploy when no classic protection rule exists)."
+  }
+  assert {
+    condition     = length(github_repository_environment_deployment_policy.this) == 1 && github_repository_environment_deployment_policy.this["branch:main"].branch_pattern == "main" && github_repository_environment_deployment_policy.this["branch:main"].tag_pattern == null
+    error_message = "by default exactly one custom policy must exist, for the branch named main."
+  }
+  assert {
+    condition     = github_repository_environment_deployment_policy.this["branch:main"].environment == "production" && github_repository_environment_deployment_policy.this["branch:main"].repository == "orders-service"
+    error_message = "the default policy must attach to this environment."
   }
   assert {
     condition     = length(github_repository_environment.this[0].reviewers) == 0 && github_repository_environment.this[0].prevent_self_review == false
@@ -40,8 +48,8 @@ run "secure_defaults" {
     error_message = "no wait timer is set."
   }
   assert {
-    condition     = length(github_repository_environment_deployment_policy.this) == 0 && length(github_actions_environment_variable.this) == 0
-    error_message = "no custom branch policies and no variables by default."
+    condition     = length(github_actions_environment_variable.this) == 0
+    error_message = "no variables by default."
   }
   assert {
     condition     = output.environment_name == "production"
@@ -54,7 +62,7 @@ run "disabled_creates_nothing" {
   variables {
     enabled                  = false
     reviewers                = { users = [1001] }
-    deployment_branch_policy = { protected_branches = false, custom_patterns = { main = { branch_pattern = "main" } } }
+    deployment_branch_policy = { branches = ["main"], tags = ["v*"] }
     variables                = { DEPLOY_REGION = "us-east1" }
   }
 
@@ -78,27 +86,59 @@ run "environment_name_used_verbatim" {
   }
 }
 
-run "no_reviewers_with_protected_branch_policy_passes" {
+run "no_reviewers_with_explicit_main_passes" {
   command = plan
-  variables { deployment_branch_policy = { protected_branches = true } }
+  variables { deployment_branch_policy = { branches = ["main"] } }
 
   assert {
-    condition     = github_repository_environment.this[0].deployment_branch_policy[0].protected_branches == true && length(github_repository_environment.this[0].reviewers) == 0
-    error_message = "an environment with no reviewers and a protected-branch-only policy must plan."
+    condition     = length(github_repository_environment.this[0].reviewers) == 0 && github_repository_environment.this[0].deployment_branch_policy[0].custom_branch_policies == true && toset(keys(github_repository_environment_deployment_policy.this)) == toset(["branch:main"])
+    error_message = "an environment with no reviewers and an explicit main branch must plan, matching the default."
+  }
+}
+
+run "no_reviewers_with_other_branch_name" {
+  command = plan
+  variables { deployment_branch_policy = { branches = ["trunk", "release-2026"] } }
+
+  assert {
+    condition     = length(github_repository_environment_deployment_policy.this) == 2 && github_repository_environment_deployment_policy.this["branch:trunk"].branch_pattern == "trunk"
+    error_message = "a repository whose default branch has another name must be able to say so."
   }
 }
 
 run "rejects_no_reviewers_with_open_policy" {
   command = plan
-  variables { deployment_branch_policy = { protected_branches = false } }
+  variables { deployment_branch_policy = { branches = [] } }
   expect_failures = [var.deployment_branch_policy]
 }
 
-run "rejects_no_reviewers_with_custom_patterns" {
+run "rejects_no_reviewers_with_protected_branches" {
   command = plan
-  variables {
-    deployment_branch_policy = { protected_branches = false, custom_patterns = { main = { branch_pattern = "main" } } }
-  }
+  variables { deployment_branch_policy = { protected_branches = true, branches = [] } }
+  expect_failures = [var.deployment_branch_policy]
+}
+
+run "rejects_no_reviewers_with_star_wildcard" {
+  command = plan
+  variables { deployment_branch_policy = { branches = ["main", "release/*"] } }
+  expect_failures = [var.deployment_branch_policy]
+}
+
+run "rejects_no_reviewers_with_question_wildcard" {
+  command = plan
+  variables { deployment_branch_policy = { branches = ["mai?"] } }
+  expect_failures = [var.deployment_branch_policy]
+}
+
+run "rejects_no_reviewers_with_bracket_wildcard" {
+  command = plan
+  variables { deployment_branch_policy = { branches = ["[m]ain"] } }
+  expect_failures = [var.deployment_branch_policy]
+}
+
+run "rejects_no_reviewers_with_tag_pattern" {
+  command = plan
+  variables { deployment_branch_policy = { branches = ["main"], tags = ["v1.0.0"] } }
   expect_failures = [var.deployment_branch_policy]
 }
 
@@ -115,7 +155,7 @@ run "reviewers_block_self_review" {
     error_message = "user and team reviewers must be passed through by id."
   }
   assert {
-    condition     = github_repository_environment.this[0].can_admins_bypass == false && github_repository_environment.this[0].deployment_branch_policy[0].protected_branches == true
+    condition     = github_repository_environment.this[0].can_admins_bypass == false && toset(keys(github_repository_environment_deployment_policy.this)) == toset(["branch:main"])
     error_message = "reviewers must not loosen the other defaults."
   }
 }
@@ -148,34 +188,37 @@ run "rejects_fractional_reviewer_id" {
   expect_failures = [var.reviewers]
 }
 
-run "reviewers_with_custom_patterns" {
+run "reviewers_allow_wildcards_and_tags" {
   command = plan
   variables {
-    reviewers = { teams = [2002] }
-    deployment_branch_policy = {
-      protected_branches = false
-      custom_patterns = {
-        main     = { branch_pattern = "main" }
-        releases = { tag_pattern = "v*" }
-      }
-    }
+    reviewers                = { teams = [2002] }
+    deployment_branch_policy = { branches = ["main", "release/*"], tags = ["v*"] }
   }
 
   assert {
     condition     = github_repository_environment.this[0].deployment_branch_policy[0].protected_branches == false && github_repository_environment.this[0].deployment_branch_policy[0].custom_branch_policies == true
-    error_message = "custom patterns must switch the policy to custom branch policies."
+    error_message = "patterns must use custom branch policies."
   }
   assert {
-    condition     = length(github_repository_environment_deployment_policy.this) == 2
-    error_message = "one deployment policy per custom pattern."
+    condition     = toset(keys(github_repository_environment_deployment_policy.this)) == toset(["branch:main", "branch:release/*", "tag:v*"])
+    error_message = "one deployment policy per pattern, keyed by kind and pattern."
   }
   assert {
-    condition     = github_repository_environment_deployment_policy.this["main"].branch_pattern == "main" && github_repository_environment_deployment_policy.this["main"].tag_pattern == null && github_repository_environment_deployment_policy.this["releases"].tag_pattern == "v*"
-    error_message = "branch and tag patterns must be passed through on their own keys."
+    condition     = github_repository_environment_deployment_policy.this["branch:release/*"].branch_pattern == "release/*" && github_repository_environment_deployment_policy.this["tag:v*"].tag_pattern == "v*" && github_repository_environment_deployment_policy.this["tag:v*"].branch_pattern == null
+    error_message = "branch and tag patterns must be passed through on their own arguments."
   }
+}
+
+run "reviewers_allow_protected_branches" {
+  command = plan
+  variables {
+    reviewers                = { users = [1001] }
+    deployment_branch_policy = { protected_branches = true, branches = [] }
+  }
+
   assert {
-    condition     = github_repository_environment_deployment_policy.this["main"].environment == "production" && github_repository_environment_deployment_policy.this["main"].repository == "orders-service"
-    error_message = "deployment policies must attach to this environment."
+    condition     = github_repository_environment.this[0].deployment_branch_policy[0].protected_branches == true && github_repository_environment.this[0].deployment_branch_policy[0].custom_branch_policies == false && length(github_repository_environment_deployment_policy.this) == 0
+    error_message = "with reviewers, a protected-branches policy must be accepted, with no custom policies."
   }
 }
 
@@ -183,7 +226,7 @@ run "reviewers_with_open_policy" {
   command = plan
   variables {
     reviewers                = { users = [1001] }
-    deployment_branch_policy = { protected_branches = false }
+    deployment_branch_policy = { branches = [] }
   }
 
   assert {
@@ -192,29 +235,29 @@ run "reviewers_with_open_policy" {
   }
 }
 
-run "rejects_protected_branches_with_custom_patterns" {
+run "rejects_protected_branches_with_patterns" {
   command = plan
   variables {
     reviewers                = { users = [1001] }
-    deployment_branch_policy = { custom_patterns = { main = { branch_pattern = "main" } } }
+    deployment_branch_policy = { protected_branches = true }
   }
   expect_failures = [var.deployment_branch_policy]
 }
 
-run "rejects_pattern_with_both_branch_and_tag" {
+run "rejects_padded_pattern" {
   command = plan
   variables {
     reviewers                = { users = [1001] }
-    deployment_branch_policy = { protected_branches = false, custom_patterns = { both = { branch_pattern = "main", tag_pattern = "v*" } } }
+    deployment_branch_policy = { branches = [" main"] }
   }
   expect_failures = [var.deployment_branch_policy]
 }
 
-run "rejects_pattern_with_neither_branch_nor_tag" {
+run "rejects_empty_pattern" {
   command = plan
   variables {
     reviewers                = { users = [1001] }
-    deployment_branch_policy = { protected_branches = false, custom_patterns = { empty = {} } }
+    deployment_branch_policy = { tags = [""] }
   }
   expect_failures = [var.deployment_branch_policy]
 }
@@ -228,8 +271,8 @@ run "admin_bypass_override_keeps_other_defaults" {
     error_message = "admin_bypass.enabled must turn admin bypass on."
   }
   assert {
-    condition     = github_repository_environment.this[0].deployment_branch_policy[0].protected_branches == true
-    error_message = "the protected-branch policy must survive the admin bypass override."
+    condition     = toset(keys(github_repository_environment_deployment_policy.this)) == toset(["branch:main"])
+    error_message = "the main-only policy must survive the admin bypass override."
   }
 }
 

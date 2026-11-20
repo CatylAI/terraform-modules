@@ -11,7 +11,14 @@ module "context" {
 locals {
   has_reviewers = length(var.reviewers.users) + length(var.reviewers.teams) > 0
   policy        = var.deployment_branch_policy
-  custom        = length(local.policy.custom_patterns) > 0
+
+  # One deployment policy per pattern, keyed by kind and pattern, so adding a pattern never
+  # re-keys the others.
+  patterns = merge(
+    { for b in local.policy.branches : "branch:${b}" => { branch_pattern = b, tag_pattern = null } },
+    { for t in local.policy.tags : "tag:${t}" => { branch_pattern = null, tag_pattern = t } },
+  )
+  custom = length(local.patterns) > 0
 
   # The API takes protected_branches or custom_branch_policies, never both and never neither. Any
   # ref may deploy only when the block is omitted, which validation allows only with reviewers.
@@ -20,7 +27,7 @@ locals {
     custom_branch_policies = local.custom
   }] : []
 
-  custom_patterns = var.enabled && local.custom ? local.policy.custom_patterns : {}
+  custom_patterns = var.enabled ? local.patterns : {}
   variables       = var.enabled ? var.variables : {}
 }
 

@@ -45,7 +45,7 @@ variable "environment_name" {
 }
 
 variable "reviewers" {
-  description = "Required reviewers, as numeric GitHub user and team ids. One approval releases the job, and the person who triggered it cannot approve it (self-review is always blocked when reviewers are set). At most six users and teams in total. On GitHub Free, Pro and Team, required reviewers work only in public repositories; leave this empty on a private repository and rely on a protected-branch-only policy, approved at the pull request."
+  description = "Required reviewers, as numeric GitHub user and team ids. One approval releases the job, and the person who triggered it cannot approve it (self-review is always blocked when reviewers are set). At most six users and teams in total. On GitHub Free, Pro and Team, required reviewers work only in public repositories; leave this empty on a private repository and rely on the default policy, which deploys only from explicitly named branches (main), with approval at the pull request that changes them."
   type = object({
     users = optional(set(number), [])
     teams = optional(set(number), [])
@@ -65,30 +65,46 @@ variable "reviewers" {
 }
 
 variable "deployment_branch_policy" {
-  description = "Which refs may deploy. protected_branches = true (the default) allows only branches with branch protection. Set protected_branches = false with custom_patterns (keyed by a stable name, each one branch_pattern or tag_pattern) to allow only matching refs, or with no patterns to allow any ref. Without reviewers, only the protected-branch policy is accepted, so the environment is never left open."
+  description = "Which refs may deploy. The default allows only the branch named main. branches and tags are name patterns (GitHub's 'selected branches and tags'). protected_branches = true instead allows branches with classic branch protection, and requires branches = [] and tags = []. With protected_branches = false and no patterns, any ref may deploy. Without reviewers, only explicit branch names are accepted: no protected_branches, no wildcards (*, ?, [) and no tags, so the environment is never left open."
   type = object({
-    protected_branches = optional(bool, true)
-    custom_patterns = optional(map(object({
-      branch_pattern = optional(string)
-      tag_pattern    = optional(string)
-    })), {})
+    protected_branches = optional(bool, false)
+    branches           = optional(set(string), ["main"])
+    tags               = optional(set(string), [])
   })
   default  = {}
   nullable = false
 
+  # Without reviewers the branch names are the only gate, so each rule below closes a way for an
+  # unreviewed ref to deploy. GitHub lets every branch deploy under protected_branches when no
+  # classic branch protection rule exists, and rulesets are not documented to count.
   validation {
-    condition     = length(var.reviewers.users) + length(var.reviewers.teams) > 0 || var.deployment_branch_policy.protected_branches
-    error_message = "deployment_branch_policy.protected_branches must be true when no reviewers are set; otherwise anyone who can push a branch could deploy unreviewed."
+    condition     = length(var.reviewers.users) + length(var.reviewers.teams) > 0 || !var.deployment_branch_policy.protected_branches
+    error_message = "deployment_branch_policy.protected_branches requires reviewers: GitHub lets every branch deploy when no classic branch protection rule exists, and rulesets are not documented to count. Name the branches in deployment_branch_policy.branches instead."
   }
 
   validation {
-    condition     = !(var.deployment_branch_policy.protected_branches && length(var.deployment_branch_policy.custom_patterns) > 0)
-    error_message = "deployment_branch_policy.custom_patterns requires protected_branches = false; GitHub accepts one policy or the other, not both."
+    condition     = length(var.reviewers.users) + length(var.reviewers.teams) > 0 || var.deployment_branch_policy.protected_branches || length(var.deployment_branch_policy.branches) > 0
+    error_message = "deployment_branch_policy.branches must name at least one branch when no reviewers are set; otherwise any ref could deploy unreviewed."
   }
 
   validation {
-    condition     = alltrue([for p in values(var.deployment_branch_policy.custom_patterns) : (p.branch_pattern == null) != (p.tag_pattern == null)])
-    error_message = "each deployment_branch_policy.custom_patterns entry must set exactly one of branch_pattern or tag_pattern."
+    condition     = length(var.reviewers.users) + length(var.reviewers.teams) > 0 || alltrue([for b in var.deployment_branch_policy.branches : !can(regex("[*?\\[]", b))])
+    error_message = "deployment_branch_policy.branches must be exact branch names, with no '*', '?' or '[', when no reviewers are set: anyone who can push a matching new branch could deploy unreviewed."
+  }
+
+  validation {
+    condition     = length(var.reviewers.users) + length(var.reviewers.teams) > 0 || length(var.deployment_branch_policy.tags) == 0
+    error_message = "deployment_branch_policy.tags requires reviewers: tags are not protected by branch rules, so anyone who can push a tag could deploy unreviewed."
+  }
+
+  validation {
+    condition     = !var.deployment_branch_policy.protected_branches || (length(var.deployment_branch_policy.branches) == 0 && length(var.deployment_branch_policy.tags) == 0)
+    error_message = "deployment_branch_policy.protected_branches = true requires branches = [] and tags = []; GitHub accepts protected branches or name patterns, not both."
+  }
+
+  validation {
+    condition     = alltrue([for p in setunion(var.deployment_branch_policy.branches, var.deployment_branch_policy.tags) : length(trimspace(p)) > 0 && trimspace(p) == p])
+    error_message = "deployment_branch_policy branches and tags must be non-empty patterns with no leading or trailing whitespace."
   }
 }
 

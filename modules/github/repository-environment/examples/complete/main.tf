@@ -29,13 +29,11 @@ module "environment" {
     teams = [tonumber(data.github_team.release.id)]
   }
 
-  # Reviewers are set, so the policy may be narrowed to named refs instead of protected branches.
+  # Reviewers are set, so the policy may use wildcards and tags. Without reviewers, only exact
+  # branch names are accepted.
   deployment_branch_policy = {
-    protected_branches = false
-    custom_patterns = {
-      main     = { branch_pattern = "main" }
-      releases = { tag_pattern = "v*" }
-    }
+    branches = ["main", "release/*"]
+    tags     = ["v*"]
   }
 
   admin_bypass = { enabled = false }
