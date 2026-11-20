@@ -44,6 +44,8 @@ tar -xzf "$work/trivy.tgz" -C "$work" trivy && install -m 0755 "$work/trivy" "$d
 fetch "tfdocs-$arch" "https://github.com/terraform-docs/terraform-docs/releases/download/v${TFDOCS_VERSION}/terraform-docs-v${TFDOCS_VERSION}-linux-${arch}.tar.gz" tfdocs.tgz
 tar -xzf "$work/tfdocs.tgz" -C "$work" terraform-docs && install -m 0755 "$work/terraform-docs" "$dest/terraform-docs"
 
-"$dest/tflint" --version | head -1
-"$dest/trivy" --version | head -1
+# No `| head` here: under pipefail, head closing the pipe early kills the writer with SIGPIPE
+# and the script exits 141 (seen on the first CI run).
+"$dest/tflint" --version
+"$dest/trivy" --version
 "$dest/terraform-docs" --version
