@@ -20,8 +20,8 @@ locals {
 }
 
 # Destroying this resource does not restore anything: the provider writes a placeholder billing
-# email to the organisation. Stop managing it with a `removed` block (lifecycle { destroy = false }),
-# not by destroying it; the README shows how.
+# email to the organisation. prevent_destroy refuses that at plan; stop managing it with a
+# `removed` block (lifecycle { destroy = false }) instead. The README shows how.
 resource "github_organization_settings" "this" {
   count = var.enabled ? 1 : 0
 
@@ -55,10 +55,15 @@ resource "github_organization_settings" "this" {
   secret_scanning_enabled_for_new_repositories                 = var.new_repository_security.secret_scanning
   secret_scanning_push_protection_enabled_for_new_repositories = var.new_repository_security.secret_scanning_push_protection
   advanced_security_enabled_for_new_repositories               = var.new_repository_security.advanced_security
+  # Literal, not a knob (MS-5.4): the provider's destroy writes fixed values to the live
+  # organisation instead of removing anything. Retire the module with `removed` blocks.
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Destroying this resource resets the organisation to all repositories and all actions, the
-# loosest policy. Stop managing it with a `removed` block instead.
+# loosest policy. prevent_destroy refuses that at plan; use a `removed` block instead.
 resource "github_actions_organization_permissions" "this" {
   count = var.enabled ? 1 : 0
 
@@ -83,8 +88,15 @@ resource "github_actions_organization_permissions" "this" {
       repository_ids = enabled_repositories_config.value.selected_repository_ids
     }
   }
+  # Literal, not a knob (MS-5.4): the provider's destroy writes fixed values to the live
+  # organisation instead of removing anything. Retire the module with `removed` blocks.
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
+# Destroying this resource resets the token to read and pull request approval off: secure, but it
+# overwrites whatever the root set, so it is refused at plan like the other two.
 resource "github_actions_organization_workflow_permissions" "this" {
   count = var.enabled ? 1 : 0
 
@@ -94,4 +106,9 @@ resource "github_actions_organization_workflow_permissions" "this" {
 
   default_workflow_permissions     = var.workflow_permissions.default_workflow_permissions
   can_approve_pull_request_reviews = var.workflow_permissions.can_approve_pull_request_reviews
+  # Literal, not a knob (MS-5.4): the provider's destroy writes fixed values to the live
+  # organisation instead of removing anything. Retire the module with `removed` blocks.
+  lifecycle {
+    prevent_destroy = true
+  }
 }

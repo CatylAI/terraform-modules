@@ -92,9 +92,13 @@ fixed values:
 - Actions permissions: all repositories, all actions (the loosest policy)
 - workflow permissions: read-only token, no pull request approval
 
-Never stop managing an organisation by destroying the module or setting `enabled = false` on a
-live one. Remove the module call and add `removed` blocks, which forget the resources and leave
-GitHub as it is:
+So all three resources carry a literal `lifecycle { prevent_destroy = true }`. Destroying the
+module, deleting the module call, or setting `enabled = false` on an organisation the module
+already manages is refused at plan, by design. `enabled = false` from the start still creates
+nothing.
+
+To stop managing an organisation, remove the module call and add `removed` blocks, which forget
+the resources and leave GitHub as it is:
 
 ```hcl
 removed {
@@ -117,9 +121,12 @@ removed {
 }
 ```
 
-The module has no `deletion_protection` knob: the provider offers no native setting to drive, and
-a literal `prevent_destroy` is reserved for unrecoverable losses (MS-5.4). Every value here is
-recoverable by applying the configuration again.
+Why `prevent_destroy` is a literal here, with no `deletion_protection` knob: these are live
+singletons that cannot be removed, and the provider's destroy writes values back to them instead,
+including insecure ones (all actions allowed, a placeholder billing email). The provider offers no
+native protection setting a variable could drive, and Terraform cannot drive `prevent_destroy` from
+a variable (MS-5.4). A stray `enabled = false` or refactor must fail loudly at plan rather than
+quietly loosen a live organisation on apply.
 
 ### No secrets
 
@@ -197,7 +204,7 @@ and the module sends none.
 | Pillar | Default | Trade-off |
 |---|---|---|
 | Security | Members read-only on repositories; no public repositories, private forks or Pages from members; secret scanning, push protection, dependency graph and Dependabot on for new repositories; Actions limited to GitHub-owned and verified actions; read-only `GITHUB_TOKEN` that cannot approve pull requests; no secret inputs | Restricting actions blocks third-party actions from unverified creators until a root lists them in `patterns_allowed`. SHA pinning stays off by default, because the provider cannot reverse it |
-| Reliability | One resource per setting family, so a failed Actions call leaves organisation settings alone; workflow permissions always target the provider's owner | Destroy writes fixed values rather than restoring prior ones; use `removed` blocks |
+| Reliability | One resource per setting family, so a failed Actions call leaves organisation settings alone; workflow permissions always target the provider's owner; destroy is refused at plan (`prevent_destroy`) | Retiring the module takes `removed` blocks rather than `enabled = false` |
 | Cost optimization | Nothing paid is required; paid features (Advanced Security, Secret Protection on private repositories) are explicit | None |
 | Operational excellence | One input shape across modules; adoption by `moved` or `import` with every looser live value written as an explicit override | A read-only token and restricted actions can break workflows that relied on the looser defaults; the adoption overrides keep them working until each is tightened |
 | Performance | None: organisation settings have no performance dimension | None |
@@ -239,7 +246,7 @@ and the module sends none.
 | context | Who and where, supplied by the calling root: tenant, environment, component, repo, optional labels, allowed_environments and name_prefix (module-standard MS-3). Validated, but GitHub carries no labels and no setting here depends on it (ADR-0016). | ```object({ tenant = string environment = string component = string repo = string labels = optional(map(string), {}) allowed_environments = optional(list(string)) name_prefix = optional(string) })``` | n/a | yes |
 | name | Logical name of this instance, kebab-case. It identifies the module call only and is never sent to GitHub: the organisation configured is always the github provider's owner (ADR-0016). | `string` | n/a | yes |
 | actions | Which repositories may run GitHub Actions, and which actions they may use. Defaults: every repository may run Actions; only GitHub-owned actions, actions from verified Marketplace creators, the organisation's own actions and patterns_allowed may run (allowed_actions = "selected").  selected_repository_ids is required when enabled_repositories = "selected", and must be empty otherwise. patterns_allowed is accepted only with allowed_actions = "selected".  sha_pinning_required is null (not managed) by default: turning it on fails every workflow that uses an action by tag, and the provider never sends false, so it cannot be turned off again through Terraform. Set it to true only once every workflow pins actions by full commit SHA. | ```object({ enabled_repositories = optional(string, "all") selected_repository_ids = optional(set(number), []) allowed_actions = optional(string, "selected") github_owned_allowed = optional(bool, true) verified_allowed = optional(bool, true) patterns_allowed = optional(set(string), []) sha_pinning_required = optional(bool) })``` | `{}` | no |
-| enabled | Set false to create nothing. Every output is then null. | `bool` | `true` | no |
+| enabled | Set false to create nothing. Every output is then null. On an organisation this module already manages, false is refused at plan by design (prevent_destroy), because the provider's destroy writes fixed, looser values to the live organisation. To stop managing it, remove the module call and add removed blocks with destroy = false (README). | `bool` | `true` | no |
 | features | Organisation features. Organisation and repository projects on (GitHub's own defaults); web commit sign-off off. web_commit_signoff_required asks for a Signed-off-by line on commits made in the web UI; it is not commit signature verification. | ```object({ organization_projects = optional(bool, true) repository_projects = optional(bool, true) web_commit_signoff_required = optional(bool, false) })``` | `{}` | no |
 | member_privileges | What organisation members (not owners) may do. Defaults: base permission read on every repository; members may create private repositories but not public ones; no forking of private repositories; no GitHub Pages sites. create_internal_repositories applies to GitHub Enterprise Cloud organisations only; the provider does not send it for any other plan. | ```object({ default_repository_permission = optional(string, "read") create_repositories = optional(bool, true) create_public_repositories = optional(bool, false) create_private_repositories = optional(bool, true) create_internal_repositories = optional(bool, false) fork_private_repositories = optional(bool, false) create_pages = optional(bool, false) create_public_pages = optional(bool, false) create_private_pages = optional(bool, false) })``` | `{}` | no |
 | new_repository_security | Security features turned on for repositories created after this is applied. Existing repositories keep their own settings; manage those per repository. Defaults: dependency graph, Dependabot alerts, Dependabot security updates, secret scanning and push protection on; Advanced Security off (paid). On private repositories, secret scanning and push protection need GitHub Secret Protection on the owner's plan: turn both off explicitly where the plan lacks it. | ```object({ dependency_graph = optional(bool, true) dependabot_alerts = optional(bool, true) dependabot_security_updates = optional(bool, true) secret_scanning = optional(bool, true) secret_scanning_push_protection = optional(bool, true) advanced_security = optional(bool, false) })``` | `{}` | no |

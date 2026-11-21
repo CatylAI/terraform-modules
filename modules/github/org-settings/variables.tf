@@ -18,7 +18,7 @@ variable "name" {
 }
 
 variable "enabled" {
-  description = "Set false to create nothing. Every output is then null."
+  description = "Set false to create nothing. Every output is then null. On an organisation this module already manages, false is refused at plan by design (prevent_destroy), because the provider's destroy writes fixed, looser values to the live organisation. To stop managing it, remove the module call and add removed blocks with destroy = false (README)."
   type        = bool
   default     = true
   nullable    = false
