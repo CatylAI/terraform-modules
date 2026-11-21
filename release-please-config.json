@@ -31,6 +31,10 @@
     "modules/github/repository-environment": {
       "component": "github-repository-environment",
       "changelog-path": "CHANGELOG.md"
+    },
+    "modules/github/org-settings": {
+      "component": "github-org-settings",
+      "changelog-path": "CHANGELOG.md"
     }
   }
 }
