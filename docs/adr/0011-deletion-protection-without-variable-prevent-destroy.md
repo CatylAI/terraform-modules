@@ -26,6 +26,10 @@ lifecycles, changes the resource address when the flag flips and forces replacem
   (verified in the schema by the workload-identity-pool build), so they use the
   `deletion_protection` knob, not the literal. The original text listed them under the literal by
   mistake.
+- Amended 2026-11-21 (wave 1): the literal also covers resources whose provider destroy writes
+  values back to a live singleton (github/org-settings: org settings, Actions permissions and
+  workflow permissions). Destroying them would silently loosen a live organisation, so the plan
+  is refused instead, and retirement goes through `removed { lifecycle { destroy = false } }`.
 
 ## Consequences
 

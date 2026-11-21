@@ -161,6 +161,11 @@ module's `terraform test` suite. A rule with no mark is enforced in review, and 
     is unrecoverable and which are never torn down per environment. Check the provider schema
     first: WIF pools, for example, offer `deletion_policy` from google 8.3.0, so they take the knob
     and not the literal.
+  - Literal `prevent_destroy = true` is also used where the provider's "destroy" writes values
+    back to a live singleton instead of removing anything (GitHub organisation settings: a
+    destroy resets the billing email and opens Actions to everything). There, a refused plan is
+    safer than an apply that loosens a live organisation. Retire such a module with
+    `removed { lifecycle { destroy = false } }`.
 
 ## MS-6 Invariants (no knob, ever)
 
