@@ -3,6 +3,7 @@
   "modules/gcp/project-services": "0.0.0",
   "modules/gcp/service-account": "0.0.0",
   "modules/gcp/workload-identity-pool": "0.0.0",
+  "modules/github/app-installation": "0.0.0",
   "modules/github/repository": "0.0.0",
   "modules/github/repository-environment": "0.0.0"
 }
