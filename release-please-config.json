@@ -11,6 +11,38 @@
     "modules/gcp/gcs-bucket": {
       "component": "gcp-gcs-bucket",
       "changelog-path": "CHANGELOG.md"
+    },
+    "modules/gcp/project-services": {
+      "component": "gcp-project-services",
+      "changelog-path": "CHANGELOG.md"
+    },
+    "modules/gcp/service-account": {
+      "component": "gcp-service-account",
+      "changelog-path": "CHANGELOG.md"
+    },
+    "modules/gcp/workload-identity-pool": {
+      "component": "gcp-workload-identity-pool",
+      "changelog-path": "CHANGELOG.md"
+    },
+    "modules/github/app-installation": {
+      "component": "github-app-installation",
+      "changelog-path": "CHANGELOG.md"
+    },
+    "modules/github/org-ruleset": {
+      "component": "github-org-ruleset",
+      "changelog-path": "CHANGELOG.md"
+    },
+    "modules/github/org-settings": {
+      "component": "github-org-settings",
+      "changelog-path": "CHANGELOG.md"
+    },
+    "modules/github/repository": {
+      "component": "github-repository",
+      "changelog-path": "CHANGELOG.md"
+    },
+    "modules/github/repository-environment": {
+      "component": "github-repository-environment",
+      "changelog-path": "CHANGELOG.md"
     }
   }
 }

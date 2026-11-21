@@ -33,4 +33,9 @@ jobs:
           bash scripts/install-tools.sh "$HOME/.local/bin"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Gate
+        env:
+          # tflint --init downloads its rulesets from GitHub's API. Unauthenticated, that shares the
+          # runner IP's 60 requests per hour and failed the wave 1 PR with a 403. The workflow token
+          # is read-only (permissions: contents: read) and authenticates the download.
+          GITHUB_TOKEN: ${{ github.token }}
         run: bash scripts/gate.sh
