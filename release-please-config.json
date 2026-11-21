@@ -35,6 +35,10 @@
     "modules/github/repository-environment": {
       "component": "github-repository-environment",
       "changelog-path": "CHANGELOG.md"
+    },
+    "modules/github/org-ruleset": {
+      "component": "github-org-ruleset",
+      "changelog-path": "CHANGELOG.md"
     }
   }
 }
