@@ -24,6 +24,10 @@
       "component": "gcp-workload-identity-pool",
       "changelog-path": "CHANGELOG.md"
     },
+    "modules/github/app-installation": {
+      "component": "github-app-installation",
+      "changelog-path": "CHANGELOG.md"
+    },
     "modules/github/repository": {
       "component": "github-repository",
       "changelog-path": "CHANGELOG.md"
