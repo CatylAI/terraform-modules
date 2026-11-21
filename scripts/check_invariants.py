@@ -308,6 +308,29 @@ def check_no_internal_identifiers() -> None:
                 fail("MS-15.1", f, f"line {n} carries an internal identifier ({m.group(0)!r}); keep it in the private docs repository")
 
 
+# MS-5.4 / ADR-0011: resources whose provider destroy writes back to a live singleton keep a
+# literal prevent_destroy. terraform test can't assert a prevent_destroy refusal (expect_failures
+# doesn't catch it), so the gate checks the configuration instead.
+REQUIRE_PREVENT_DESTROY = {
+    "modules/github/org-settings": (
+        "github_organization_settings",
+        "github_actions_organization_permissions",
+        "github_actions_organization_workflow_permissions",
+    ),
+}
+
+
+def check_prevent_destroy() -> None:
+    for module, resource_types in REQUIRE_PREVENT_DESTROY.items():
+        text = "".join(read(f) for f in tf_files(ROOT / module))
+        for rtype in resource_types:
+            bodies = [b for name, b in blocks(text, "resource") if name == rtype]
+            if not bodies:
+                fail("MS-5.4", module, f"{rtype} not found")
+            elif not all(re.search(r"\bprevent_destroy\s*=\s*true\b", b) for b in bodies):
+                fail("MS-5.4", module, f"{rtype} must keep a literal prevent_destroy = true (ADR-0011)")
+
+
 def check_release_config() -> None:
     config = json.loads((ROOT / "release-please-config.json").read_text(encoding="utf-8"))
     manifest = json.loads((ROOT / ".release-please-manifest.json").read_text(encoding="utf-8"))
@@ -366,6 +389,7 @@ def main() -> int:
     check_contracts()
     check_public_ready()
     check_no_internal_identifiers()
+    check_prevent_destroy()
     check_release_config()
     check_trivyignore()
     check_adr_index()
