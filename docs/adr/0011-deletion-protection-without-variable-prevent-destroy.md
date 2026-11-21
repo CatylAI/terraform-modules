@@ -20,7 +20,16 @@ lifecycles, changes the resource address when the flag flips and forces replacem
 - Every module exposes it the same way: `deletion_protection = { enabled = optional(bool, true) }`.
   Buckets add `force_destroy`, allowed only with protection off.
 - Use literal `prevent_destroy = true` only for resources with neither setting that are never torn
-  down per environment and whose loss is unrecoverable: DNS zones, WIF pools, state buckets.
+  down per environment and whose loss is unrecoverable. Read the schema before choosing the
+  literal.
+- Amended 2026-11-20 (wave 1): workload identity pools offer `deletion_policy` from google 8.3.0
+  (verified in the schema by the workload-identity-pool build), so they use the
+  `deletion_protection` knob, not the literal. The original text listed them under the literal by
+  mistake.
+- Amended 2026-11-21 (wave 1): the literal also covers resources whose provider destroy writes
+  values back to a live singleton (github/org-settings: org settings, Actions permissions and
+  workflow permissions). Destroying them would silently loosen a live organisation, so the plan
+  is refused instead, and retirement goes through `removed { lifecycle { destroy = false } }`.
 
 ## Consequences
 

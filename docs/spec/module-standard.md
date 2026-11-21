@@ -67,7 +67,9 @@ module's `terraform test` suite. A rule with no mark is enforced in review, and 
   it.
 - **MS-2.3** `name_override` (`string`, default `null`) is the only way to break the naming
   convention. It exists to adopt resources whose names predate this standard, with zero
-  diff (ADR-0013). New resources leave it null.
+  diff (ADR-0013). New resources leave it null. Only a module that computes a resource name from
+  `context` offers it. A module whose resources have no name (API enablement) or take their name
+  verbatim (GitHub modules, ADR-0016) omits it.
 - **MS-2.4** Inputs that a caller must decide have **no default**: anything that differs
   between environments or deployments, such as project IDs, locations, sizes and images.
   A forgotten value must fail at plan time, not quietly pick something.
@@ -111,7 +113,8 @@ module's `terraform test` suite. A rule with no mark is enforced in review, and 
   - `repo`: a repository name.
   - `name`: kebab-case.
   - User label keys: valid GCP label keys, and none of the reserved keys.
-- **MS-3.3** The resource name is `<prefix>-<name>`. The prefix is `context.name_prefix` when the
+- **MS-3.3** The resource name of a GCP module is `<prefix>-<name>`. GitHub modules use
+  `var.name` verbatim and apply no labels (ADR-0016). The prefix is `context.name_prefix` when the
   caller sets it, otherwise `<tenant>-<environment>-<component>`. `name_override` replaces the
   whole name, for adoption only (MS-2.3). A module states any length limit its resource type imposes, as a
   `precondition` on the resource.
@@ -155,8 +158,14 @@ module's `terraform test` suite. A rule with no mark is enforced in review, and 
   - Every module exposes this as `deletion_protection = { enabled = optional(bool, true) }`, so
     the knob reads the same in every module.
   - Literal `prevent_destroy = true` is used only on resources with neither setting whose loss
-    is unrecoverable and which are never torn down per environment (DNS zones, WIF pools, state
-    buckets).
+    is unrecoverable and which are never torn down per environment. Check the provider schema
+    first: WIF pools, for example, offer `deletion_policy` from google 8.3.0, so they take the knob
+    and not the literal.
+  - Literal `prevent_destroy = true` is also used where the provider's "destroy" writes values
+    back to a live singleton instead of removing anything (GitHub organisation settings: a
+    destroy resets the billing email and opens Actions to everything). There, a refused plan is
+    safer than an apply that loosens a live organisation. Retire such a module with
+    `removed { lifecycle { destroy = false } }`.
 
 ## MS-6 Invariants (no knob, ever)
 

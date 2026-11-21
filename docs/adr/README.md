@@ -31,4 +31,4 @@
 | [0013](0013-name-override-for-adoption.md) | name_override exists only to adopt existing resources with zero diff | Accepted |
 | [0014](0014-public-distribution.md) | The repository is public, with its own CI; registry mirrors are a later option | Accepted |
 | [0015](0015-scale-and-cost-defaults.md) | Safety is a default, capacity is an input; accumulating data has bounded retention | Accepted |
-| [0017](0017-agent-review-workflow.md) | Same-repository pull requests get an advisory agent review from an inline workflow | Accepted |
+| [0016](0016-github-modules-naming.md) | GitHub modules use names verbatim and carry no labels | Accepted |
