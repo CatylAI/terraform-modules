@@ -1,6 +1,6 @@
 {
   "modules/gcp/gcs-bucket": "0.1.0",
-  "modules/github/org-ruleset": "0.0.0",
+  "modules/github/org-ruleset": "0.1.0",
   "modules/github/org-settings": "0.0.0",
   "modules/github/repository": "0.1.0",
   "modules/github/repository-environment": "0.0.0"
