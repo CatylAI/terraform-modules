@@ -73,3 +73,5 @@ same change.
   limit.
 - **Running the gate.** It has run on macOS (bash 3.2, Terraform 1.16.4). It has not run on the
   CI image.
+- **Agent review.** The `claude-review` workflow has not run. It stays off until the repository
+  variable `AGENT_ENABLED` and the secret `CLAUDE_CODE_OAUTH_TOKEN` are set (ADR-0017).
