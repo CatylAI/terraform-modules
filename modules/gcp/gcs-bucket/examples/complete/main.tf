@@ -39,7 +39,7 @@ module "bucket" {
   }
 
   iam = {
-    api-read = { role = "roles/storage.objectViewer", members = ["serviceAccount:api@acme-uat.iam.gserviceaccount.com"] }
+    api-read = { role = "roles/storage.objectViewer", members = { api = "serviceAccount:api@acme-uat.iam.gserviceaccount.com" } }
   }
 
   notifications = {

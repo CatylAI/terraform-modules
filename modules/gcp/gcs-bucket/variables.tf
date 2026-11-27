@@ -233,10 +233,10 @@ variable "cors" {
 }
 
 variable "iam" {
-  description = "Additive IAM bindings keyed by a stable binding name. Primitive roles and public principals are rejected; public read goes through public_access."
+  description = "Additive IAM bindings keyed by a stable binding name. Members are a map keyed by a stable member name (e.g. { api = \"serviceAccount:...\" }), so a member created in the same apply can be granted. Primitive roles and public principals are rejected; public read goes through public_access."
   type = map(object({
     role    = string
-    members = set(string)
+    members = map(string)
   }))
   default  = {}
   nullable = false
@@ -247,7 +247,7 @@ variable "iam" {
   }
 
   validation {
-    condition     = alltrue([for b in values(var.iam) : length(setintersection(b.members, ["allUsers", "allAuthenticatedUsers"])) == 0])
+    condition     = alltrue([for b in values(var.iam) : length(setintersection(values(b.members), ["allUsers", "allAuthenticatedUsers"])) == 0])
     error_message = "iam must not grant allUsers or allAuthenticatedUsers; use public_access with a justification (MS-6.4)."
   }
 }
@@ -268,7 +268,7 @@ variable "public_access" {
 }
 
 variable "notifications" {
-  description = "Pub/Sub notifications keyed by a stable name. The bucket's service agent is granted roles/pubsub.publisher on each topic unless grant_publisher is false."
+  description = "Pub/Sub notifications keyed by a stable name. The bucket's service agent is granted roles/pubsub.publisher on each notification's topic unless grant_publisher is false. Two notifications on one topic: set grant_publisher = false on all but one."
   type = map(object({
     topic              = string
     event_types        = optional(set(string), ["OBJECT_FINALIZE"])

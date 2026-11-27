@@ -90,7 +90,7 @@ run "disabled_creates_nothing" {
   command = plan
   variables {
     enabled       = false
-    iam           = { readers = { role = "roles/storage.objectViewer", members = ["group:readers@example.com"] } }
+    iam           = { readers = { role = "roles/storage.objectViewer", members = { readers = "group:readers@example.com" } } }
     notifications = { uploads = { topic = "projects/acme-uat/topics/uploads" } }
   }
 
@@ -161,7 +161,7 @@ run "complete_configuration" {
       web = { origins = ["https://www.example.com"], methods = ["GET", "HEAD"] }
     }
     iam = {
-      readers = { role = "roles/storage.objectViewer", members = ["group:readers@example.com", "serviceAccount:api@acme-uat.iam.gserviceaccount.com"] }
+      readers = { role = "roles/storage.objectViewer", members = { readers = "group:readers@example.com", api = "serviceAccount:api@acme-uat.iam.gserviceaccount.com" } }
     }
     notifications = {
       uploads = { topic = "projects/acme-uat/topics/uploads", object_name_prefix = "incoming/" }
@@ -185,12 +185,16 @@ run "complete_configuration" {
     error_message = "retention policy must be set, unlocked by default."
   }
   assert {
-    condition     = length(google_storage_bucket_iam_member.this) == 2 && contains(keys(google_storage_bucket_iam_member.this), "readers/group:readers@example.com")
+    condition     = length(google_storage_bucket_iam_member.this) == 2 && contains(keys(google_storage_bucket_iam_member.this), "readers/readers")
     error_message = "one IAM member per binding member, keyed <binding>/<member>."
   }
   assert {
     condition     = length(google_storage_notification.this) == 1 && length(google_pubsub_topic_iam_member.gcs_publisher) == 1
     error_message = "a notification must come with the publisher grant on its topic."
+  }
+  assert {
+    condition     = contains(keys(google_pubsub_topic_iam_member.gcs_publisher), "uploads") && google_pubsub_topic_iam_member.gcs_publisher["uploads"].topic == "projects/acme-uat/topics/uploads"
+    error_message = "the publisher grant must be keyed by the notification's name (known at plan), not by its topic id."
   }
 }
 
@@ -203,7 +207,7 @@ run "public_access_with_justification" {
     error_message = "public access must lift prevention and mark the bucket with a public-access label."
   }
   assert {
-    condition     = google_storage_bucket_iam_member.this["public-access/allUsers"].member == "allUsers" && google_storage_bucket_iam_member.this["public-access/allUsers"].role == "roles/storage.objectViewer"
+    condition     = google_storage_bucket_iam_member.this["public-access/all-users"].member == "allUsers" && google_storage_bucket_iam_member.this["public-access/all-users"].role == "roles/storage.objectViewer"
     error_message = "public access must grant allUsers object read only."
   }
 }
@@ -216,13 +220,13 @@ run "rejects_public_access_without_justification" {
 
 run "rejects_primitive_role" {
   command = plan
-  variables { iam = { admins = { role = "roles/editor", members = ["group:admins@example.com"] } } }
+  variables { iam = { admins = { role = "roles/editor", members = { admins = "group:admins@example.com" } } } }
   expect_failures = [var.iam]
 }
 
 run "rejects_public_principal_in_iam" {
   command = plan
-  variables { iam = { everyone = { role = "roles/storage.objectViewer", members = ["allUsers"] } } }
+  variables { iam = { everyone = { role = "roles/storage.objectViewer", members = { everyone = "allUsers" } } } }
   expect_failures = [var.iam]
 }
 
