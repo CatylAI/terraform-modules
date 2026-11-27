@@ -1,7 +1,7 @@
 {
   "modules/gcp/gcs-bucket": "0.2.0",
   "modules/gcp/project-services": "0.1.0",
-  "modules/gcp/service-account": "0.1.0",
+  "modules/gcp/service-account": "0.2.0",
   "modules/github/org-ruleset": "0.1.0",
   "modules/github/org-settings": "0.1.0",
   "modules/github/repository": "0.1.0",
