@@ -91,7 +91,12 @@ module's `terraform test` suite. A rule with no mark is enforced in review, and 
 
 - **MS-2.6** Collections that drive `for_each` or `dynamic` blocks are `map(object(...))` keyed
   by a stable, human-chosen name. They are never lists. Inserting a list element shifts every
-  later index and forces replacement.
+  later index and forces replacement. A `for_each` key, and any `count`, comes only from those
+  caller-chosen names, never from a value that can be unknown at plan time: a member string, an
+  email or an id of something created in the same apply. That is why members of an IAM binding
+  are a `map(string)` keyed by a member name. A module that takes such values has a same-apply
+  test: a fixture that creates the value and passes it in, planned with a mock provider, which
+  leaves computed values unknown. **[test]**
 - **MS-2.7** Use a `validation` block for any constraint you would otherwise write in a comment:
   enums, formats, ranges, and rules across attributes. The error message names the input and
   the rule, never the offending value if it could be sensitive (the same rule as lib-platform
