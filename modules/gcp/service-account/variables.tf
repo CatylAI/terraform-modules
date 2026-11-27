@@ -82,10 +82,10 @@ variable "project_roles" {
 }
 
 variable "impersonation" {
-  description = "Principals allowed to act as this service account, keyed by a stable binding name. role must be one of roles/iam.serviceAccountTokenCreator (mint access and ID tokens), roles/iam.serviceAccountOpenIdTokenCreator (ID tokens only), roles/iam.serviceAccountUser (attach the account to a workload) or roles/iam.workloadIdentityUser (Workload Identity Federation or GKE sign-in). Nothing is granted by default, so token creation exists only through an explicit entry. Each member is an additive binding; public principals are rejected."
+  description = "Principals allowed to act as this service account, keyed by a stable binding name. role must be one of roles/iam.serviceAccountTokenCreator (mint access and ID tokens), roles/iam.serviceAccountOpenIdTokenCreator (ID tokens only), roles/iam.serviceAccountUser (attach the account to a workload) or roles/iam.workloadIdentityUser (Workload Identity Federation or GKE sign-in). Nothing is granted by default, so token creation exists only through an explicit entry. Members are a map keyed by a stable member name (e.g. { ci = \"principalSet://...\" }), so a principal created in the same apply can be granted; each is an additive binding. Public principals are rejected."
   type = map(object({
     role    = string
-    members = set(string)
+    members = map(string)
   }))
   default  = {}
   nullable = false
@@ -101,7 +101,7 @@ variable "impersonation" {
   }
 
   validation {
-    condition     = alltrue([for b in values(var.impersonation) : length(setintersection(b.members, ["allUsers", "allAuthenticatedUsers"])) == 0])
+    condition     = alltrue([for b in values(var.impersonation) : length(setintersection(values(b.members), ["allUsers", "allAuthenticatedUsers"])) == 0])
     error_message = "impersonation must not name allUsers or allAuthenticatedUsers (module-standard MS-6.4)."
   }
 

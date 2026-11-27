@@ -83,7 +83,7 @@ run "disabled_creates_nothing" {
   variables {
     enabled       = false
     project_roles = { aiplatform = { role = "roles/aiplatform.user" } }
-    impersonation = { ci = { role = "roles/iam.serviceAccountTokenCreator", members = ["group:ci@example.com"] } }
+    impersonation = { ci = { role = "roles/iam.serviceAccountTokenCreator", members = { ci = "group:ci@example.com" } } }
   }
 
   assert {
@@ -132,15 +132,15 @@ run "complete_configuration" {
     impersonation = {
       github = {
         role    = "roles/iam.workloadIdentityUser"
-        members = ["principalSet://iam.googleapis.com/projects/123456789012/locations/global/workloadIdentityPools/github/attribute.repository/acme/orders-service"]
+        members = { orders-service = "principalSet://iam.googleapis.com/projects/123456789012/locations/global/workloadIdentityPools/github/attribute.repository/acme/orders-service" }
       }
       deployer = {
         role    = "roles/iam.serviceAccountUser"
-        members = ["serviceAccount:deployer@acme-uat.iam.gserviceaccount.com"]
+        members = { deployer = "serviceAccount:deployer@acme-uat.iam.gserviceaccount.com" }
       }
       oncall = {
         role    = "roles/iam.serviceAccountTokenCreator"
-        members = ["group:oncall@example.com", "user:alice@example.com"]
+        members = { oncall = "group:oncall@example.com", alice = "user:alice@example.com" }
       }
     }
   }
@@ -162,15 +162,15 @@ run "complete_configuration" {
     error_message = "project roles must be granted to this account in project_id."
   }
   assert {
-    condition     = length(google_service_account_iam_member.impersonation) == 4 && contains(keys(google_service_account_iam_member.impersonation), "oncall/group:oncall@example.com")
-    error_message = "one additive IAM member per impersonation member, keyed <binding>/<member>."
+    condition     = length(google_service_account_iam_member.impersonation) == 4 && contains(keys(google_service_account_iam_member.impersonation), "oncall/oncall")
+    error_message = "one additive IAM member per impersonation member, keyed <binding>/<member name>."
   }
   assert {
     condition     = alltrue([for b in google_service_account_iam_member.impersonation : b.service_account_id == "projects/acme-uat/serviceAccounts/acme-uat-orders-api@acme-uat.iam.gserviceaccount.com"])
     error_message = "impersonation bindings must be on this account."
   }
   assert {
-    condition     = google_service_account_iam_member.impersonation["github/principalSet://iam.googleapis.com/projects/123456789012/locations/global/workloadIdentityPools/github/attribute.repository/acme/orders-service"].role == "roles/iam.workloadIdentityUser"
+    condition     = google_service_account_iam_member.impersonation["github/orders-service"].role == "roles/iam.workloadIdentityUser"
     error_message = "each impersonation member must carry its entry's role."
   }
 }
@@ -179,7 +179,7 @@ run "token_creation_only_when_requested" {
   command = plan
   variables {
     project_roles = { aiplatform = { role = "roles/aiplatform.user" } }
-    impersonation = { deployer = { role = "roles/iam.serviceAccountUser", members = ["serviceAccount:deployer@acme-uat.iam.gserviceaccount.com"] } }
+    impersonation = { deployer = { role = "roles/iam.serviceAccountUser", members = { deployer = "serviceAccount:deployer@acme-uat.iam.gserviceaccount.com" } } }
   }
 
   assert {
@@ -212,31 +212,31 @@ run "rejects_malformed_project_role" {
 
 run "rejects_basic_role_in_impersonation" {
   command = plan
-  variables { impersonation = { admins = { role = "roles/viewer", members = ["group:admins@example.com"] } } }
+  variables { impersonation = { admins = { role = "roles/viewer", members = { admins = "group:admins@example.com" } } } }
   expect_failures = [var.impersonation]
 }
 
 run "rejects_non_impersonation_role" {
   command = plan
-  variables { impersonation = { keys = { role = "roles/iam.serviceAccountKeyAdmin", members = ["group:admins@example.com"] } } }
+  variables { impersonation = { keys = { role = "roles/iam.serviceAccountKeyAdmin", members = { admins = "group:admins@example.com" } } } }
   expect_failures = [var.impersonation]
 }
 
 run "rejects_all_users" {
   command = plan
-  variables { impersonation = { everyone = { role = "roles/iam.serviceAccountTokenCreator", members = ["allUsers"] } } }
+  variables { impersonation = { everyone = { role = "roles/iam.serviceAccountTokenCreator", members = { everyone = "allUsers" } } } }
   expect_failures = [var.impersonation]
 }
 
 run "rejects_all_authenticated_users" {
   command = plan
-  variables { impersonation = { everyone = { role = "roles/iam.serviceAccountUser", members = ["group:ci@example.com", "allAuthenticatedUsers"] } } }
+  variables { impersonation = { everyone = { role = "roles/iam.serviceAccountUser", members = { ci = "group:ci@example.com", everyone = "allAuthenticatedUsers" } } } }
   expect_failures = [var.impersonation]
 }
 
 run "rejects_empty_impersonation_members" {
   command = plan
-  variables { impersonation = { nobody = { role = "roles/iam.serviceAccountUser", members = [] } } }
+  variables { impersonation = { nobody = { role = "roles/iam.serviceAccountUser", members = {} } } }
   expect_failures = [var.impersonation]
 }
 

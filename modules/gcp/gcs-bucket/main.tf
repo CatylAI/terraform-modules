@@ -10,13 +10,16 @@ module "context" {
 locals {
   labels = merge(module.context.labels, var.public_access.enabled ? { "public-access" = "true" } : {})
 
+  # Keys come only from caller-chosen names, never from member strings or topic ids: a value
+  # created in the same apply is unknown at plan time, and a for_each key must be known (MS-2.6).
+  # tests/same_apply.tftest.hcl holds this.
   iam_members = var.enabled ? merge(
     { for pair in flatten([
       for key, binding in var.iam : [
-        for member in binding.members : { key = "${key}/${member}", role = binding.role, member = member }
+        for member_key, member in binding.members : { key = "${key}/${member_key}", role = binding.role, member = member }
       ]
     ]) : pair.key => { role = pair.role, member = pair.member } },
-    var.public_access.enabled ? { "public-access/allUsers" = { role = "roles/storage.objectViewer", member = "allUsers" } } : {}
+    var.public_access.enabled ? { "public-access/all-users" = { role = "roles/storage.objectViewer", member = "allUsers" } } : {}
   ) : {}
 
   # Cost guards (MS-14.3) are ordinary lifecycle rules under reserved keys, so they show in the
@@ -38,7 +41,7 @@ locals {
   lifecycle_rules = merge(local.managed_lifecycle_rules, var.lifecycle_rules)
 
   notifications    = var.enabled ? var.notifications : {}
-  publisher_topics = toset([for n in values(local.notifications) : n.topic if n.grant_publisher])
+  publisher_grants = { for key, n in local.notifications : key => n.topic if n.grant_publisher }
 }
 
 resource "google_storage_bucket" "this" {
@@ -143,12 +146,12 @@ resource "google_storage_bucket_iam_member" "this" {
 }
 
 data "google_storage_project_service_account" "this" {
-  count   = length(local.publisher_topics) > 0 ? 1 : 0
+  count   = length(keys(local.publisher_grants)) > 0 ? 1 : 0
   project = var.project_id
 }
 
 resource "google_pubsub_topic_iam_member" "gcs_publisher" {
-  for_each = local.publisher_topics
+  for_each = local.publisher_grants
 
   topic  = each.value
   role   = "roles/pubsub.publisher"
