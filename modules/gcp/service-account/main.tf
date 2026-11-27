@@ -16,7 +16,9 @@ locals {
 
   impersonation_members = var.enabled ? { for pair in flatten([
     for key, binding in var.impersonation : [
-      for member in binding.members : { key = "${key}/${member}", role = binding.role, member = member }
+      # Keyed by the caller's member name, never the member string: a principal created in the
+      # same apply is unknown at plan time (MS-2.6). tests/same_apply.tftest.hcl holds this.
+      for member_key, member in binding.members : { key = "${key}/${member_key}", role = binding.role, member = member }
     ]
   ]) : pair.key => { role = pair.role, member = pair.member } } : {}
 }

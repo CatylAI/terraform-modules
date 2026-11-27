@@ -27,16 +27,16 @@ module "service_account" {
     # GitHub Actions signs in through Workload Identity Federation; no key exists.
     github-actions = {
       role    = "roles/iam.workloadIdentityUser"
-      members = ["principalSet://iam.googleapis.com/projects/123456789012/locations/global/workloadIdentityPools/github/attribute.repository/acme/orders-service"]
+      members = { orders-service = "principalSet://iam.googleapis.com/projects/123456789012/locations/global/workloadIdentityPools/github/attribute.repository/acme/orders-service" }
     }
     # Token creation is never implied; this entry grants it explicitly, to a group only.
     break-glass = {
       role    = "roles/iam.serviceAccountTokenCreator"
-      members = ["group:platform-oncall@example.com"]
+      members = { platform-oncall = "group:platform-oncall@example.com" }
     }
     scheduler = {
       role    = "roles/iam.serviceAccountUser"
-      members = ["serviceAccount:scheduler@acme-uat.iam.gserviceaccount.com"]
+      members = { scheduler = "serviceAccount:scheduler@acme-uat.iam.gserviceaccount.com" }
     }
   }
 }
